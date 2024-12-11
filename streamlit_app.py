@@ -38,7 +38,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Directory containing the model and scaler
-model_dir = r"C:\\Users\\c0937432\\OneDrive - Lambton College\\Desktop\\Aman Lambton\\Bhavik Application Design for Big Data"
+model_dir = r"C:\Users\c0937432\OneDrive - Lambton College\Desktop\Aman Lambton\Bhavik Application Design for Big Data/scaler (1).pkl"
 
 # Load scaler
 scaler_file = os.path.join(model_dir, 'scaler (1).pkl')
