@@ -44,12 +44,6 @@ model_dir = r"C:\Users\c0937432\OneDrive - Lambton College\Desktop\Aman Lambton\
 model_file = os.path.join(model_dir, 'combined_model.pkl')
 scaler_file = os.path.join(model_dir, 'scaler.pkl')
 
-# Ensure files exist
-if not os.path.exists(model_file):
-    raise FileNotFoundError(f"Model file not found: {model_file}")
-if not os.path.exists(scaler_file):
-    raise FileNotFoundError(f"Scaler file not found: {scaler_file}")
-
 # Load files
 model = joblib.load(model_file)
 scaler = joblib.load(scaler_file)
