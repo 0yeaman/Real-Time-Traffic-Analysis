@@ -1,83 +1,166 @@
-import streamlit as st
-import pandas as pd
-import plotly.express as px
-import datetime
+import os
 import joblib
+import numpy as np
+import pandas as pd
+import streamlit as st
+import matplotlib.pyplot as plt
 
-# Page configuration
-st.set_page_config(page_title="Real-Time Traffic Analysis", layout="wide")
+# Custom CSS for styling
+st.markdown("""
+    <style>
+    .main {
+        background-color: #f0f0f0;
+    }
+    h1 {
+        color: #007BFF;
+        text-align: center;
+        font-family: 'Verdana', sans-serif;
+    }
+    h2, h3, .stSelectbox, .stNumberInput {
+        color: #333333;
+        font-family: 'Verdana', sans-serif;
+    }
+    .stButton>button {
+        background-color: #007BFF;
+        color: white;
+        border-radius: 5px;
+        font-size: 16px;
+        font-family: 'Verdana', sans-serif;
+    }
+    .result-box {
+        border: 2px solid #007BFF;
+        padding: 15px;
+        border-radius: 5px;
+        background-color: #e8f4ff;
+        margin-top: 20px;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-# Title
-st.title("Real-Time Traffic Analysis (RTTA)")
+# Load models and scaler
+model_dir = r"C:\\Users\\brian\\RTTA_Models"
+models = {
+    'Random Forest': joblib.load(os.path.join(model_dir, 'RTTA_RandomForest.pkl')),
+    'Gradient Boosting': joblib.load(os.path.join(model_dir, 'RTTA_GradientBoosting.pkl')),
+    'SVM': joblib.load(os.path.join(model_dir, 'RTTA_SVM.pkl')),
+    'Logistic Regression': joblib.load(os.path.join(model_dir, 'RTTA_LogisticRegression.pkl')),
+}
+scaler = joblib.load(os.path.join(model_dir, 'rtta_scaler.pkl'))
 
-# Sidebar inputs
-st.sidebar.header("User Input")
+# Initialize session state for prediction history
+if "history" not in st.session_state:
+    st.session_state["history"] = []
 
-def fetch_real_time_data(api_url):
-    """Fetch real-time traffic data from an API (placeholder function)."""
-    # Replace with actual API logic
-    try:
-        data = pd.DataFrame({
-            "Location": ["Location A", "Location B", "Location C"],
-            "Traffic_Flow": [120, 200, 180],
-            "Time": ["08:00 AM", "08:15 AM", "08:30 AM"]
-        })
-        return data
-    except Exception as e:
-        st.error(f"Error fetching data: {e}")
-        return pd.DataFrame()
+# Streamlit UI
+st.title("🚗 Real-Time Traffic Severity Analysis")
+st.write("Enter the values for the following features to predict traffic severity:")
 
-# Upload local traffic data
-uploaded_file = st.sidebar.file_uploader("Upload Traffic Data (CSV):", type="csv")
-if uploaded_file is not None:
-    traffic_data = pd.read_csv(uploaded_file)
-    st.sidebar.success("File uploaded successfully!")
+# Input fields for features
+st.write("### Input Features")
+city = st.text_input("City")
+lon = st.number_input("Longitude", value=-79.0, step=0.1)
+lat = st.number_input("Latitude", value=43.0, step=0.1)
+weather_id = st.number_input("Weather ID", value=800, step=1)
+temp = st.number_input("Temperature (°C)", value=20.0, step=1.0)
+feels_like = st.number_input("Feels Like Temperature (°C)", value=20.0, step=1.0)
+temp_min = st.number_input("Minimum Temperature (°C)", value=18.0, step=1.0)
+temp_max = st.number_input("Maximum Temperature (°C)", value=22.0, step=1.0)
+pressure = st.number_input("Pressure (hPa)", value=1013, step=1)
+humidity = st.number_input("Humidity (%)", value=50, step=1)
+visibility = st.number_input("Visibility (m)", value=10000, step=100)
+wind_speed = st.number_input("Wind Speed (m/s)", value=3.0, step=0.1)
+wind_deg = st.number_input("Wind Direction (°)", value=180, step=1)
+rain_1h = st.number_input("Rain Volume (1 hour, mm)", value=0.0, step=0.1)
+clouds_all = st.number_input("Cloud Coverage (%)", value=20, step=1)
+sunrise = st.number_input("Sunrise (Unix Time)", value=1672531200, step=1)
+sunset = st.number_input("Sunset (Unix Time)", value=1672574400, step=1)
+
+# Validation for input values
+if temp < -50 or temp > 60:
+    st.error("Temperature must be between -50 and 60 degrees Celsius!")
+elif humidity < 0 or humidity > 100:
+    st.error("Humidity must be between 0 and 100%!")
 else:
-    # Fetch data from API (use your real API endpoint)
-    traffic_data = fetch_real_time_data("ttps://api.openweathermap.org/data/2.5/weather?q=Toronto&appid=0daa089ec817d4921f4a1df8478dc369")
+    # Select the model to use
+    st.write("### Select Prediction Model")
+    selected_model = st.selectbox("Choose a model for prediction:", list(models.keys()))
 
-# Display raw data
-if st.checkbox("Show Raw Data"):
-    st.subheader("Raw Traffic Data")
-    st.dataframe(traffic_data)
+    # Predict button
+    if st.button("Predict Traffic Severity"):
+        # Prepare the input
+        features = np.array([[lon, lat, weather_id, temp, feels_like, temp_min, temp_max, pressure, humidity, visibility, wind_speed, wind_deg, rain_1h, clouds_all, sunrise, sunset]])
+        scaled_features = scaler.transform(features)
 
-# Traffic Flow Visualization
-st.subheader("Traffic Flow Analysis")
-if not traffic_data.empty:
-    try:
-        fig = px.bar(traffic_data, x="Location", y="Traffic_Flow", color="Traffic_Flow",
-                     title="Traffic Flow at Different Locations")
-        st.plotly_chart(fig, use_container_width=True)
-    except Exception as e:
-        st.error(f"Error visualizing data: {e}")
-else:
-    st.warning("No data available for visualization.")
+        # Predict using the selected model
+        model = models[selected_model]
+        prediction = model.predict(scaled_features)[0]
+        probabilities = model.predict_proba(scaled_features)[0]
 
-# Real-Time Prediction
-if st.sidebar.button("Run Prediction"):
-    try:
-        # Paths to models and scaler
-        model_path = "/content/combined_models.pkl"
-        scaler_path = "/content/scaler.pkl"
-
-        # Load the model and scaler
-        model = joblib.load(model_path)
-        scaler = joblib.load(scaler_path)
-
-        # Mock input features
-        sample_features = pd.DataFrame({
-            "Feature1": [10],
-            "Feature2": [20],
-            "Feature3": [30]
+        # Add prediction to history
+        st.session_state["history"].append({
+            "Model": selected_model,
+            "Prediction": int(prediction),
+            "Probabilities": probabilities.tolist(),
+            "Features": {
+                "city": city,
+                "lon": lon,
+                "lat": lat,
+                "weather_id": weather_id,
+                "temp": temp,
+                "feels_like": feels_like,
+                "temp_min": temp_min,
+                "temp_max": temp_max,
+                "pressure": pressure,
+                "humidity": humidity,
+                "visibility": visibility,
+                "wind_speed": wind_speed,
+                "wind_deg": wind_deg,
+                "rain_1h": rain_1h,
+                "clouds_all": clouds_all,
+                "sunrise": sunrise,
+                "sunset": sunset
+            }
         })
 
-        # Scale and predict
-        scaled_features = scaler.transform(sample_features)
-        prediction = model.predict(scaled_features)
+        # Display results in a styled box
+        st.markdown(f"""
+            <div class="result-box">
+                <h3>Prediction using {selected_model}:</h3>
+                <p><b>Predicted Traffic Severity:</b> {int(prediction)}</p>
+                <h4>Probabilities for each severity level:</h4>
+                <ul>
+                    <li><b>Low:</b> {probabilities[0]:.2f}</li>
+                    <li><b>Moderate:</b> {probabilities[1]:.2f}</li>
+                    <li><b>High:</b> {probabilities[2]:.2f}</li>
+                </ul>
+            </div>
+        """, unsafe_allow_html=True)
 
-        st.sidebar.success(f"Prediction: {prediction[0]}")
-    except Exception as e:
-        st.error(f"Prediction failed: {e}")
+        # Plot probabilities
+        st.write("### Probability Distribution")
+        labels = ["Low", "Moderate", "High"]
+        plt.bar(labels, probabilities, color=['green', 'orange', 'red'])
+        plt.xlabel("Traffic Severity Level")
+        plt.ylabel("Probability")
+        plt.title("Probability Distribution for Traffic Severity Levels")
+        st.pyplot(plt)
 
-# Real-time clock
-st.sidebar.text(f"Current Time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        # Explain the model
+        st.write("### Model Explanation")
+        if selected_model == "Random Forest":
+            st.write("Random Forest combines multiple decision trees to improve prediction accuracy.")
+        elif selected_model == "Gradient Boosting":
+            st.write("Gradient Boosting builds sequential trees to optimize the prediction outcome.")
+        elif selected_model == "SVM":
+            st.write("SVM separates data into classes using a hyperplane for optimal classification.")
+        elif selected_model == "Logistic Regression":
+            st.write("Logistic Regression predicts probabilities of categorical outcomes.")
+
+# Display prediction history
+st.write("### Prediction History")
+if st.session_state["history"]:
+    history_df = pd.DataFrame(st.session_state["history"])
+    st.write(history_df)
+    st.download_button("Download History as CSV", data=history_df.to_csv(index=False), file_name="traffic_prediction_history.csv")
+else:
+    st.write("No predictions yet.")
