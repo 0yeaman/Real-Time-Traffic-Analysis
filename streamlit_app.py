@@ -37,8 +37,22 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Define the directory containing the scaler and models
-scaler_file = r"C:\Users\c0937432\OneDrive - Lambton College\Desktop\Aman Lambton\Bhavik Application Design for Big Data\scaler.pkl"
+# Define the directory where the model and scaler files are located
+model_dir = r"C:\Users\c0937432\OneDrive - Lambton College\Desktop\Aman Lambton\Bhavik Application Design for Big Data"
+
+# Define paths for model and scaler files
+model_file = os.path.join(model_dir, 'combined_model.pkl')
+scaler_file = os.path.join(model_dir, 'scaler.pkl')
+
+# Ensure files exist
+if not os.path.exists(model_file):
+    raise FileNotFoundError(f"Model file not found: {model_file}")
+if not os.path.exists(scaler_file):
+    raise FileNotFoundError(f"Scaler file not found: {scaler_file}")
+
+# Load files
+model = joblib.load(model_file)
+scaler = joblib.load(scaler_file)
 
 
 # Load combined models
