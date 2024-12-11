@@ -38,8 +38,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Load combined model file
-model_file = r"C:\Users\c0937432\OneDrive - Lambton College\Desktop\Aman Lambton\Bhavik Application Design for Big Data\combined_model.pkl"
+model_dir = r"C:\Users\c0937432\OneDrive - Lambton College\Desktop\Aman Lambton\Bhavik Application Design for Big Data"
 scaler_file = os.path.join(model_dir, 'scaler (1).pkl')
+
 
 # Check if the file exists
 if not os.path.exists(scaler_file):
