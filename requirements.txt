@@ -1,6 +1,2 @@
-numpy
-pandas
-matplotlib
-joblib
-scikit-learn
-plotly
+pip install streamlit pandas matplotlib plotly
+pip install data_sources
