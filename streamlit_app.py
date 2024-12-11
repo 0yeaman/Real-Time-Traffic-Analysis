@@ -41,7 +41,7 @@ st.markdown("""
 model_dir = r"C:\Users\c0937432\OneDrive - Lambton College\Desktop\Aman Lambton\Bhavik Application Design for Big Data"
 
 # Load scaler
-scaler_file = os.path.join(model_dir, 'scaler (1).pkl')
+scaler_file = os.path.join(model_dir, 'scaler.pkl')
 if not os.path.exists(scaler_file):
     st.error(f"Scaler file not found: {scaler_file}")
     st.stop()
