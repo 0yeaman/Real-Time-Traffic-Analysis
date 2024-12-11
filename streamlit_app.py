@@ -37,18 +37,31 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Load combined model file
-model_dir = r"C:\Users\c0937432\OneDrive - Lambton College\Desktop\Aman Lambton\Bhavik Application Design for Big Data"
+# Directory containing the model and scaler
+model_dir = r"C:\\Users\\c0937432\\OneDrive - Lambton College\\Desktop\\Aman Lambton\\Bhavik Application Design for Big Data"
+
+# Load scaler
 scaler_file = os.path.join(model_dir, 'scaler (1).pkl')
-
-
-# Check if the file exists
 if not os.path.exists(scaler_file):
-    raise FileNotFoundError(f"Scaler file not found at: {scaler_file}")
-
-# Load the scaler
+    st.error(f"Scaler file not found: {scaler_file}")
+    st.stop()
 scaler = joblib.load(scaler_file)
 
+# Load combined models
+model_file = os.path.join(model_dir, 'combined_model.pkl')
+try:
+    models = joblib.load(model_file)
+    # Filter for required models only
+    models = {key: models[key] for key in ['Random Forest', 'Gradient Boost', 'Neural Network']}
+except FileNotFoundError:
+    st.error(f"Model file not found: {model_file}")
+    st.stop()
+except KeyError as e:
+    st.error(f"Missing required model in the file: {e}")
+    st.stop()
+except Exception as e:
+    st.error(f"Error loading model file: {e}")
+    st.stop()
 
 # Initialize session state for prediction history
 if "history" not in st.session_state:
@@ -82,7 +95,7 @@ sunset = st.number_input("Sunset Time (UTC, seconds)", value=1627527600, step=1)
 
 # Select the model to use
 st.write("### Select Prediction Model")
-selected_model = st.selectbox("Choose a model for prediction:", ['Random Forest', 'XGBoost', 'Decision Tree', 'KNN'])
+selected_model = st.selectbox("Choose a model for prediction:", ['Random Forest', 'Gradient Boost', 'Neural Network'])
 
 # Predict button
 if st.button("Predict Traffic Severity"):
@@ -90,10 +103,13 @@ if st.button("Predict Traffic Severity"):
     features = np.array([[lon, lat, weather_id, temp, feels_like, temp_min, temp_max, pressure, humidity, visibility, 
                           wind_speed, wind_deg, rain_1h, clouds_all, sunrise, sunset]])
 
+    # Scale features
+    features_scaled = scaler.transform(features)
+
     # Predict using the selected model
     model = models[selected_model]
-    prediction = model.predict(features)[0]
-    probabilities = model.predict_proba(features)[0]
+    prediction = model.predict(features_scaled)[0]
+    probabilities = model.predict_proba(features_scaled)[0]
 
     # Add prediction to history
     st.session_state["history"].append({
@@ -151,12 +167,10 @@ if st.button("Predict Traffic Severity"):
     st.write("### Model Explanation")
     if selected_model == "Random Forest":
         st.write("Random Forest uses an ensemble of decision trees to make predictions based on majority voting.")
-    elif selected_model == "XGBoost":
-        st.write("XGBoost is an optimized gradient-boosting framework known for high prediction accuracy.")
-    elif selected_model == "Decision Tree":
-        st.write("Decision Tree models classify data by splitting it into subsets based on feature values.")
-    elif selected_model == "KNN":
-        st.write("K-Nearest Neighbors classifies data based on the majority vote of its nearest neighbors.")
+    elif selected_model == "Gradient Boost":
+        st.write("Gradient Boost is an ensemble learning method that builds models sequentially to reduce errors.")
+    elif selected_model == "Neural Network":
+        st.write("Neural Networks use interconnected layers of nodes to learn patterns in data and make predictions.")
 
 # Display prediction history
 st.write("### Prediction History")
