@@ -2,4 +2,3 @@ streamlit
 pandas
 matplotlib
 plotly
-git+https://github.com/0yeaman/data_sources.git  # If it's hosted on GitHub
