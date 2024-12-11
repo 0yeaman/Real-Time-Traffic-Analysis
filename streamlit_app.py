@@ -39,7 +39,15 @@ st.markdown("""
 
 # Load combined model file
 model_file = r"C:\Users\c0937432\OneDrive - Lambton College\Desktop\Aman Lambton\Bhavik Application Design for Big Data\combined_model.pkl"
-models = joblib.load(model_file)
+scaler_file = os.path.join(model_dir, 'scaler (1).pkl')
+
+# Check if the file exists
+if not os.path.exists(scaler_file):
+    raise FileNotFoundError(f"Scaler file not found at: {scaler_file}")
+
+# Load the scaler
+scaler = joblib.load(scaler_file)
+
 
 # Initialize session state for prediction history
 if "history" not in st.session_state:
