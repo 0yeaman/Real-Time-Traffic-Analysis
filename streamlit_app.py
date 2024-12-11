@@ -9,158 +9,151 @@ import matplotlib.pyplot as plt
 st.markdown("""
     <style>
     .main {
-        background-color: #f0f0f0;
+        background-color: #f9f9f9;
     }
     h1 {
-        color: #007BFF;
+        color: #4CAF50;
         text-align: center;
-        font-family: 'Verdana', sans-serif;
+        font-family: 'Arial', sans-serif;
     }
     h2, h3, .stSelectbox, .stNumberInput {
         color: #333333;
-        font-family: 'Verdana', sans-serif;
+        font-family: 'Arial', sans-serif;
     }
     .stButton>button {
-        background-color: #007BFF;
+        background-color: #4CAF50;
         color: white;
         border-radius: 5px;
         font-size: 16px;
-        font-family: 'Verdana', sans-serif;
+        font-family: 'Arial', sans-serif;
     }
     .result-box {
-        border: 2px solid #007BFF;
+        border: 2px solid #4CAF50;
         padding: 15px;
         border-radius: 5px;
-        background-color: #e8f4ff;
+        background-color: #eaf7ea;
         margin-top: 20px;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# Load models and scaler
-model_dir = r"C:\\Users\\brian\\RTTA_Models"
-models = {
-    'Random Forest': joblib.load(os.path.join(model_dir, 'RTTA_RandomForest.pkl')),
-    'Gradient Boosting': joblib.load(os.path.join(model_dir, 'RTTA_GradientBoosting.pkl')),
-    'SVM': joblib.load(os.path.join(model_dir, 'RTTA_SVM.pkl')),
-    'Logistic Regression': joblib.load(os.path.join(model_dir, 'RTTA_LogisticRegression.pkl')),
-}
-scaler = joblib.load(os.path.join(model_dir, 'rtta_scaler.pkl'))
+# Load combined model file
+model_file = r"C:\Users\c0937432\OneDrive - Lambton College\Desktop\Aman Lambton\Bhavik Application Design for Big Data\combined_model.pkl"
+models = joblib.load(model_file)
 
 # Initialize session state for prediction history
 if "history" not in st.session_state:
     st.session_state["history"] = []
 
 # Streamlit UI
-st.title("🚗 Real-Time Traffic Severity Analysis")
-st.write("Enter the values for the following features to predict traffic severity:")
+st.title("🚦 Real-Time Traffic Severity Prediction")
+st.write("Input relevant traffic and weather features to predict traffic severity levels.")
 
 # Input fields for features
 st.write("### Input Features")
-city = st.text_input("City")
-lon = st.number_input("Longitude", value=-79.0, step=0.1)
-lat = st.number_input("Latitude", value=43.0, step=0.1)
+city = st.text_input("City", value="Toronto")
+lon = st.number_input("Longitude", value=-79.3832, step=0.0001)
+lat = st.number_input("Latitude", value=43.6532, step=0.0001)
 weather_id = st.number_input("Weather ID", value=800, step=1)
-temp = st.number_input("Temperature (°C)", value=20.0, step=1.0)
-feels_like = st.number_input("Feels Like Temperature (°C)", value=20.0, step=1.0)
-temp_min = st.number_input("Minimum Temperature (°C)", value=18.0, step=1.0)
-temp_max = st.number_input("Maximum Temperature (°C)", value=22.0, step=1.0)
+weather_main = st.text_input("Weather Main", value="Clear")
+weather_description = st.text_input("Weather Description", value="clear sky")
+temp = st.number_input("Temperature (K)", value=293.15, step=0.1)
+feels_like = st.number_input("Feels Like (K)", value=293.15, step=0.1)
+temp_min = st.number_input("Minimum Temperature (K)", value=289.15, step=0.1)
+temp_max = st.number_input("Maximum Temperature (K)", value=297.15, step=0.1)
 pressure = st.number_input("Pressure (hPa)", value=1013, step=1)
 humidity = st.number_input("Humidity (%)", value=50, step=1)
 visibility = st.number_input("Visibility (m)", value=10000, step=100)
-wind_speed = st.number_input("Wind Speed (m/s)", value=3.0, step=0.1)
-wind_deg = st.number_input("Wind Direction (°)", value=180, step=1)
-rain_1h = st.number_input("Rain Volume (1 hour, mm)", value=0.0, step=0.1)
-clouds_all = st.number_input("Cloud Coverage (%)", value=20, step=1)
-sunrise = st.number_input("Sunrise (Unix Time)", value=1672531200, step=1)
-sunset = st.number_input("Sunset (Unix Time)", value=1672574400, step=1)
+wind_speed = st.number_input("Wind Speed (m/s)", value=3.5, step=0.1)
+wind_deg = st.number_input("Wind Direction (°)", value=270, step=1)
+rain_1h = st.number_input("Rain Volume (mm)", value=0.0, step=0.1)
+clouds_all = st.number_input("Cloudiness (%)", value=0, step=1)
+sunrise = st.number_input("Sunrise Time (UTC, seconds)", value=1627477200, step=1)
+sunset = st.number_input("Sunset Time (UTC, seconds)", value=1627527600, step=1)
 
-# Validation for input values
-if temp < -50 or temp > 60:
-    st.error("Temperature must be between -50 and 60 degrees Celsius!")
-elif humidity < 0 or humidity > 100:
-    st.error("Humidity must be between 0 and 100%!")
-else:
-    # Select the model to use
-    st.write("### Select Prediction Model")
-    selected_model = st.selectbox("Choose a model for prediction:", list(models.keys()))
+# Select the model to use
+st.write("### Select Prediction Model")
+selected_model = st.selectbox("Choose a model for prediction:", ['Random Forest', 'XGBoost', 'Decision Tree', 'KNN'])
 
-    # Predict button
-    if st.button("Predict Traffic Severity"):
-        # Prepare the input
-        features = np.array([[lon, lat, weather_id, temp, feels_like, temp_min, temp_max, pressure, humidity, visibility, wind_speed, wind_deg, rain_1h, clouds_all, sunrise, sunset]])
-        scaled_features = scaler.transform(features)
+# Predict button
+if st.button("Predict Traffic Severity"):
+    # Prepare the input
+    features = np.array([[lon, lat, weather_id, temp, feels_like, temp_min, temp_max, pressure, humidity, visibility, 
+                          wind_speed, wind_deg, rain_1h, clouds_all, sunrise, sunset]])
 
-        # Predict using the selected model
-        model = models[selected_model]
-        prediction = model.predict(scaled_features)[0]
-        probabilities = model.predict_proba(scaled_features)[0]
+    # Predict using the selected model
+    model = models[selected_model]
+    prediction = model.predict(features)[0]
+    probabilities = model.predict_proba(features)[0]
 
-        # Add prediction to history
-        st.session_state["history"].append({
-            "Model": selected_model,
-            "Prediction": int(prediction),
-            "Probabilities": probabilities.tolist(),
-            "Features": {
-                "city": city,
-                "lon": lon,
-                "lat": lat,
-                "weather_id": weather_id,
-                "temp": temp,
-                "feels_like": feels_like,
-                "temp_min": temp_min,
-                "temp_max": temp_max,
-                "pressure": pressure,
-                "humidity": humidity,
-                "visibility": visibility,
-                "wind_speed": wind_speed,
-                "wind_deg": wind_deg,
-                "rain_1h": rain_1h,
-                "clouds_all": clouds_all,
-                "sunrise": sunrise,
-                "sunset": sunset
-            }
-        })
+    # Add prediction to history
+    st.session_state["history"].append({
+        "Model": selected_model,
+        "Prediction": int(prediction),
+        "Probabilities": probabilities.tolist(),
+        "Features": {
+            "city": city,
+            "lon": lon,
+            "lat": lat,
+            "weather_id": weather_id,
+            "weather_main": weather_main,
+            "weather_description": weather_description,
+            "temp": temp,
+            "feels_like": feels_like,
+            "temp_min": temp_min,
+            "temp_max": temp_max,
+            "pressure": pressure,
+            "humidity": humidity,
+            "visibility": visibility,
+            "wind_speed": wind_speed,
+            "wind_deg": wind_deg,
+            "rain_1h": rain_1h,
+            "clouds_all": clouds_all,
+            "sunrise": sunrise,
+            "sunset": sunset
+        }
+    })
 
-        # Display results in a styled box
-        st.markdown(f"""
-            <div class="result-box">
-                <h3>Prediction using {selected_model}:</h3>
-                <p><b>Predicted Traffic Severity:</b> {int(prediction)}</p>
-                <h4>Probabilities for each severity level:</h4>
-                <ul>
-                    <li><b>Low:</b> {probabilities[0]:.2f}</li>
-                    <li><b>Moderate:</b> {probabilities[1]:.2f}</li>
-                    <li><b>High:</b> {probabilities[2]:.2f}</li>
-                </ul>
-            </div>
-        """, unsafe_allow_html=True)
+    # Display results in a styled box
+    st.markdown(f"""
+        <div class="result-box">
+            <h3>Prediction using {selected_model}:</h3>
+            <p><b>Predicted Severity Level:</b> {int(prediction)}</p>
+            <h4>Probabilities for each level:</h4>
+            <ul>
+                <li><b>Low:</b> {probabilities[0]:.2f}</li>
+                <li><b>Medium:</b> {probabilities[1]:.2f}</li>
+                <li><b>High:</b> {probabilities[2]:.2f}</li>
+                <li><b>Severe:</b> {probabilities[3]:.2f}</li>
+            </ul>
+        </div>
+    """, unsafe_allow_html=True)
 
-        # Plot probabilities
-        st.write("### Probability Distribution")
-        labels = ["Low", "Moderate", "High"]
-        plt.bar(labels, probabilities, color=['green', 'orange', 'red'])
-        plt.xlabel("Traffic Severity Level")
-        plt.ylabel("Probability")
-        plt.title("Probability Distribution for Traffic Severity Levels")
-        st.pyplot(plt)
+    # Plot probabilities
+    st.write("### Probability Distribution")
+    labels = ["Low", "Medium", "High", "Severe"]
+    plt.bar(labels, probabilities, color=['green', 'yellow', 'orange', 'red'])
+    plt.xlabel("Severity Level")
+    plt.ylabel("Probability")
+    plt.title("Probability Distribution for Severity Levels")
+    st.pyplot(plt)
 
-        # Explain the model
-        st.write("### Model Explanation")
-        if selected_model == "Random Forest":
-            st.write("Random Forest combines multiple decision trees to improve prediction accuracy.")
-        elif selected_model == "Gradient Boosting":
-            st.write("Gradient Boosting builds sequential trees to optimize the prediction outcome.")
-        elif selected_model == "SVM":
-            st.write("SVM separates data into classes using a hyperplane for optimal classification.")
-        elif selected_model == "Logistic Regression":
-            st.write("Logistic Regression predicts probabilities of categorical outcomes.")
+    # Explain the model
+    st.write("### Model Explanation")
+    if selected_model == "Random Forest":
+        st.write("Random Forest uses an ensemble of decision trees to make predictions based on majority voting.")
+    elif selected_model == "XGBoost":
+        st.write("XGBoost is an optimized gradient-boosting framework known for high prediction accuracy.")
+    elif selected_model == "Decision Tree":
+        st.write("Decision Tree models classify data by splitting it into subsets based on feature values.")
+    elif selected_model == "KNN":
+        st.write("K-Nearest Neighbors classifies data based on the majority vote of its nearest neighbors.")
 
 # Display prediction history
 st.write("### Prediction History")
 if st.session_state["history"]:
     history_df = pd.DataFrame(st.session_state["history"])
     st.write(history_df)
-    st.download_button("Download History as CSV", data=history_df.to_csv(index=False), file_name="traffic_prediction_history.csv")
+    st.download_button("Download History as CSV", data=history_df.to_csv(index=False), file_name="prediction_history.csv")
 else:
     st.write("No predictions yet.")
